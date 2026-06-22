@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Lakshay Library — Seat Booking</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  /* ── TOKENS ─────────────────────────────────────────── */
+  :root {
+    --ink:       #0f0e0c;
+    --paper:     #faf9f6;
+    --warm:      #f5f0e8;
+    --rule:      #e2ddd4;
+    --accent:    #1a3a5c;   /* deep library navy */
+    --accent2:   #c8a84b;   /* antique gold */
+    --seat-free: #f5c518;   /* vivid yellow */
+    --seat-free-h:#e6b800;
+    --seat-busy: #d94040;   /* clear red */
+    --seat-sel:  #2f8c5a;   /* green highlight for selected */
+    --text-muted:#7a7060;
+    --radius:    8px;
+    --shadow:    0 4px 24px rgba(15,14,12,.10);
+    --shadow-lg: 0 12px 48px rgba(15,14,12,.18);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────── */
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 0 5vw;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,.25);
+  }
+  .header-inner {
+    max-width: 1200px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0;
+    gap: 16px;
+  }
+  .logo-block { display: flex; align-items: center; gap: 14px; }
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: var(--accent2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .logo-name {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+    font-weight: 900;
+    letter-spacing: -.01em;
+    line-height: 1.1;
+  }
+  .logo-sub {
+    font-size: .7rem; font-weight: 400;
+    opacity: .7; letter-spacing: .06em; text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .header-contact {
+    font-size: .82rem; text-align: right; opacity: .85;
+    line-height: 1.6; display: flex; flex-direction: column; align-items: flex-end;
+  }
+  .header-contact a { color: var(--accent2); text-decoration: none; font-weight: 600; }
+
+  /* ── HERO STRIP ─────────────────────────────────────── */
+  .hero {
+    background: linear-gradient(135deg, var(--accent) 0%, #2a5282 100%);
+    color: #fff;
+    padding: 48px 5vw 40px;
+    text-align: center;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.6rem, 4vw, 2.8rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+  .hero h1 span { color: var(--accent2); }
+  .hero p { font-size: .95rem; opacity: .8; max-width: 500px; margin: 0 auto; }
+
+  /* ── MAIN LAYOUT ─────────────────────────────────────── */
+  main { flex: 1; padding: 40px 5vw 60px; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+  /* ── LEGEND ─────────────────────────────────────────── */
+  .legend-bar {
+    display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+    background: var(--warm); border: 1px solid var(--rule);
+    border-radius: var(--radius); padding: 14px 20px;
+    margin-bottom: 32px;
+    font-size: .85rem; font-weight: 500;
+  }
+  .legend-bar .tag { display: flex; align-items: center; gap: 8px; }
+  .dot {
+    width: 22px; height: 22px; border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .dot-free { background: var(--seat-free); border: 2px solid #c9a000; }
+  .dot-busy { background: var(--seat-busy); border: 2px solid #a83030; }
+  .dot-sel  { background: var(--seat-sel);  border: 2px solid #1d6b44; }
+  .avail-count {
+    margin-left: auto;
+    font-size: .82rem; color: var(--text-muted);
+  }
+  .avail-count strong { color: var(--accent); }
+
+  /* ── SEAT GRID ───────────────────────────────────────── */
+  .grid-wrapper {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 28px 20px 32px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  .row-block { margin-bottom: 10px; }
+  .row-label {
+    font-size: .7rem; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--text-muted);
+    margin-bottom: 6px;
+    padding-left: 2px;
+  }
+  .seat-row {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .seat {
+    width: 42px; height: 42px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .62rem; font-weight: 600;
+    cursor: pointer;
+    transition: transform .12s, box-shadow .12s, filter .12s;
+    user-select: none;
+    border: none;
+    letter-spacing: .01em;
+    color: var(--ink);
+    position: relative;
+  }
+  .seat.free {
+    background: var(--seat-free);
+    box-shadow: 0 2px 6px rgba(245,197,24,.35);
+  }
+  .seat.free:hover {
+    transform: translateY(-3px) scale(1.08);
+    box-shadow: 0 6px 16px rgba(245,197,24,.55);
+    filter: brightness(1.06);
+  }
+  .seat.busy {
+    background: var(--seat-busy);
+    cursor: not-allowed;
+    opacity: .82;
+    color: #fff;
+  }
+  .seat.busy:hover { transform: none; box-shadow: none; }
+  .seat.selected {
+    background: var(--seat-sel);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(47,140,90,.45);
+    transform: translateY(-2px) scale(1.05);
+  }
+
+  /* divider between rows */
+  .row-divider {
+    height: 1px; background: var(--rule);
+    margin: 14px 0;
+  }
+
+  /* ── MODAL OVERLAY ───────────────────────────────────── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,14,12,.55);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+    padding: 20px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s;
+  }
+  .overlay.active { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    width: 100%; max-width: 440px;
+    padding: 36px 32px;
+    position: relative;
+    transform: translateY(20px);
+    transition: transform .22s;
+  }
+  .overlay.active .modal { transform: translateY(0); }
+
+  .modal-close {
+    position: absolute; top: 16px; right: 16px;
+    background: var(--warm); border: none; border-radius: 50%;
+    width: 34px; height: 34px; font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted); transition: background .15s;
+  }
+  .modal-close:hover { background: var(--rule); color: var(--ink); }
+
+  .modal-step { display: none; }
+  .modal-step.active { display: block; }
+
+  /* Step 1 – Confirm seat */
+  .seat-badge {
+    width: 72px; height: 72px;
+    background: var(--seat-free);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem; font-weight: 700;
+    margin: 0 auto 20px;
+    box-shadow: 0 4px 16px rgba(245,197,24,.4);
+  }
+  .modal h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem; font-weight: 700;
+    text-align: center; margin-bottom: 6px;
+  }
+  .modal .sub {
+    font-size: .85rem; color: var(--text-muted);
+    text-align: center; margin-bottom: 24px;
+  }
+
+  /* Step 2 – Payment form */
+  .form-group { margin-bottom: 18px; }
+  .form-group label {
+    display: block; font-size: .78rem; font-weight: 600;
+    letter-spacing: .05em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 6px;
+  }
+  .form-group input {
+    width: 100%;
+    border: 1.5px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 11px 14px;
+    font-size: .95rem; font-family: inherit;
+    background: var(--warm);
+    color: var(--ink);
+    transition: border-color .15s, box-shadow .15s;
+    outline: none;
+  }
+  .form-group input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(26,58,92,.12);
+  }
+  .form-group input.error { border-color: var(--seat-busy); }
+
+  .price-row {
+    background: var(--warm); border-radius: var(--radius);
+    padding: 12px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: .9rem; margin-bottom: 22px;
+    border: 1px solid var(--rule);
+  }
+  .price-row strong { font-size: 1.1rem; color: var(--accent); }
+
+  /* Buttons */
+  .btn {
+    display: block; width: 100%; padding: 14px;
+    border: none; border-radius: var(--radius);
+    font-size: .95rem; font-weight: 600; font-family: inherit;
+    cursor: pointer; text-align: center;
+    transition: filter .15s, transform .1s, box-shadow .15s;
+  }
+  .btn:active { transform: scale(.98); }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(26,58,92,.3);
+  }
+  .btn-primary:hover { filter: brightness(1.12); }
+  .btn-gold {
+    background: linear-gradient(135deg, #c8a84b 0%, #e6c55a 100%);
+    color: var(--ink);
+    box-shadow: 0 4px 16px rgba(200,168,75,.35);
+  }
+  .btn-gold:hover { filter: brightness(1.07); }
+  .btn-outline {
+    background: transparent; border: 1.5px solid var(--rule);
+    color: var(--text-muted); margin-top: 10px;
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Step 3 – Success */
+  .success-icon {
+    font-size: 52px; text-align: center; margin-bottom: 16px;
+  }
+  .success-card {
+    background: var(--warm); border-radius: var(--radius);
+    padding: 16px; border: 1px solid var(--rule);
+    font-size: .88rem; line-height: 1.8; margin-bottom: 22px;
+  }
+  .success-card b { color: var(--accent); }
+
+  /* ── TOAST ───────────────────────────────────────────── */
+  #toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--seat-busy); color: #fff;
+    padding: 12px 24px; border-radius: 50px;
+    font-size: .88rem; font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    z-index: 300;
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1), opacity .25s;
+    opacity: 0;
+    white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* ── FOOTER ──────────────────────────────────────────── */
+  footer {
+    background: var(--ink); color: rgba(255,255,255,.65);
+    padding: 28px 5vw;
+    font-size: .8rem; line-height: 1.7;
+    margin-top: auto;
+  }
+  .footer-inner {
+    max-width: 1200px; margin: 0 auto;
+    display: flex; flex-wrap: wrap; gap: 20px;
+    justify-content: space-between; align-items: flex-start;
+  }
+  .footer-inner a { color: var(--accent2); text-decoration: none; }
+  .footer-brand {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; color: #fff; font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .copy { margin-top: 20px; text-align: center; font-size: .75rem; opacity: .45; }
+
+  /* ── RESPONSIVE ──────────────────────────────────────── */
+  @media (max-width: 600px) {
+    .header-contact { display: none; }
+    .hero { padding: 32px 5vw 28px; }
+    .seat { width: 32px; height: 32px; font-size: .54rem; }
+    .seat-row { gap: 4px; }
+    main { padding: 24px 4vw 40px; }
+    .modal { padding: 28px 20px; }
+    .grid-wrapper { padding: 18px 12px 22px; }
+  }
+  @media (max-width: 380px) {
+    .seat { width: 26px; height: 26px; font-size: .48rem; border-radius: 4px; }
+    .seat-row { gap: 3px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ────────────────────────────────────────────── -->
+<header>
+  <div class="header-inner">
+    <div class="logo-block">
+      <div class="logo-icon">📚</div>
+      <div>
+        <div class="logo-name">Lakshay Library</div>
+        <div class="logo-sub">Padrauna, Uttar Pradesh</div>
+      </div>
+    </div>
+    <div class="header-contact">
+      <span>📍 PASHUPATI COMPLEX, Jataha Rd, Jungle Bakulha</span>
+      <span>📞 <a href="tel:08081111266">08081111266</a></span>
+    </div>
+  </div>
+</header>
+
+<!-- ── HERO ──────────────────────────────────────────────── -->
+<div class="hero">
+  <h1>Reserve Your <span>Study Seat</span></h1>
+  <p>Choose from 100 seats across 5 rows. Yellow = available, Red = booked.</p>
+</div>
+
+<!-- ── MAIN ──────────────────────────────────────────────── -->
+<main>
+
+  <!-- Legend -->
+  <div class="legend-bar">
+    <div class="tag"><div class="dot dot-free"></div> Available</div>
+    <div class="tag"><div class="dot dot-busy"></div> Booked</div>
+    <div class="tag"><div class="dot dot-sel"></div> Selected</div>
+    <div class="avail-count">Available: <strong id="availCount">—</strong> / 100</div>
+  </div>
+
+  <!-- Seat Grid -->
+  <div class="grid-wrapper">
+    <div id="seatGrid"></div>
+  </div>
+
+</main>
+
+<!-- ── FOOTER ─────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">Lakshay Library</div>
+      <div>PASHUPATI COMPLEX, Jataha Rd, near TAXI STAND<br>
+        Jungle Bakulha, Padrauna, Uttar Pradesh 274304</div>
+    </div>
+    <div>
+      <div>📞 <a href="tel:08081111266">08081111266</a></div>
+      <div style="margin-top:6px;opacity:.5;">Mon–Sun · 6 AM – 10 PM</div>
+    </div>
+  </div>
+  <div class="copy">© 2025 Lakshay Library. All rights reserved.</div>
+</footer>
+
+<!-- ── MODAL ──────────────────────────────────────────────── -->
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <button class="modal-close" id="modalClose" aria-label="Close">✕</button>
+
+    <!-- Step 1: Confirm -->
+    <div class="modal-step active" id="step1">
+      <div class="seat-badge" id="seatBadge">A1</div>
+      <h2 id="modalTitle">Book this seat?</h2>
+      <p class="sub">You're about to reserve seat <strong id="seatLabel">A1</strong> at Lakshay Library.</p>
+      <button class="btn btn-primary" id="btnProceed">Continue to Payment →</button>
+      <button class="btn btn-outline" id="btnCancel">Cancel</button>
+    </div>
+
+    <!-- Step 2: Payment form -->
+    <div class="modal-step" id="step2">
+      <h2>Enter Your Details</h2>
+      <p class="sub">Seat <strong id="seatLabel2">A1</strong> · Lakshay Library</p>
+
+      <div class="form-group">
+        <label for="inputName">Full Name</label>
+        <input type="text" id="inputName" placeholder="e.g. Rahul Sharma" autocomplete="name"/>
+      </div>
+      <div class="form-group">
+        <label for="inputPhone">Phone Number</label>
+        <input type="tel" id="inputPhone" placeholder="10-digit mobile number" autocomplete="tel" maxlength="10"/>
+      </div>
+
+      <div class="price-row">
+        <span>Seat reservation fee</span>
+        <strong>₹ 50</strong>
+      </div>
+
+      <button class="btn btn-gold" id="btnPay">💳 Pay ₹50 Now</button>
+      <button class="btn btn-outline" id="btnBackStep1">← Go back</button>
+    </div>
+
+    <!-- Step 3: Success -->
+    <div class="modal-step" id="step3">
+      <div class="success-icon">🎉</div>
+      <h2>Booking Confirmed!</h2>
+      <p class="sub" style="margin-bottom:18px;">Your seat has been successfully reserved.</p>
+      <div class="success-card" id="bookingDetails">
+        — 
+      </div>
+      <button class="btn btn-primary" id="btnDone">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ──────────────────────────────────────────────── -->
+<div id="toast" role="alert" aria-live="assertive"></div>
+
+<!-- ── SCRIPT ─────────────────────────────────────────────── -->
+<script>
+(function () {
+  /* ── Seat Data ─────────────────────────────────────────── */
+  const ROWS = ['A','B','C','D','E'];
+  const SEATS_PER_ROW = 20;
+
+  // Pre-define some seats as already booked (simulate real data)
+  const preBooked = new Set([
+    'A3','A7','A11','A15','A19',
+    'B2','B6','B10','B14','B18',
+    'C1','C5','C9','C13','C17','C20',
+    'D4','D8','D12','D16',
+    'E3','E7','E11','E15','E19','E2','E6'
+  ]);
+
+  // State: track booked seats (starts with preBooked) & the selected seat
+  const bookedSeats = new Set(preBooked);
+  let selectedSeat = null;
+
+  /* ── Build Grid ────────────────────────────────────────── */
+  function buildGrid() {
+    const grid = document.getElementById('seatGrid');
+    grid.innerHTML = '';
+
+    ROWS.forEach((row, ri) => {
+      const block = document.createElement('div');
+      block.className = 'row-block';
+
+      const label = document.createElement('div');
+      label.className = 'row-label';
+      label.textContent = `Row ${row}`;
+      block.appendChild(label);
+
+      const seatRow = document.createElement('div');
+      seatRow.className = 'seat-row';
+
+      for (let n = 1; n <= SEATS_PER_ROW; n++) {
+        const id = `${row}${n}`;
+        const btn = document.createElement('button');
+        btn.className = 'seat ' + (bookedSeats.has(id) ? 'busy' : 'free');
+        btn.textContent = id;
+        btn.dataset.seat = id;
+        btn.setAttribute('aria-label', id + (bookedSeats.has(id) ? ' – booked' : ' – available'));
+        btn.addEventListener('click', onSeatClick);
+        seatRow.appendChild(btn);
+      }
+
+      block.appendChild(seatRow);
+
+      if (ri < ROWS.length - 1) {
+        const divider = document.createElement('div');
+        divider.className = 'row-divider';
+        block.appendChild(divider);
+      }
+
+      grid.appendChild(block);
+    });
+
+    updateCount();
+  }
+
+  function updateCount() {
+    const avail = (ROWS.length * SEATS_PER_ROW) - bookedSeats.size;
+    document.getElementById('availCount').textContent = avail;
+  }
+
+  function getSeatEl(id) {
+    return document.querySelector(`.seat[data-seat="${id}"]`);
+  }
+
+  /* ── Seat Interaction ──────────────────────────────────── */
+  function onSeatClick(e) {
+    const id = e.currentTarget.dataset.seat;
+
+    if (bookedSeats.has(id)) {
+      showToast(`Seat ${id} is already booked.`);
+      return;
+    }
+
+    // Deselect previous
+    if (selectedSeat && selectedSeat !== id) {
+      const prev = getSeatEl(selectedSeat);
+      if (prev) { prev.className = 'seat free'; }
+    }
+
+    selectedSeat = id;
+    const el = getSeatEl(id);
+    el.className = 'seat selected';
+
+    openModal(id);
+  }
+
+  /* ── Modal ─────────────────────────────────────────────── */
+  const overlay   = document.getElementById('overlay');
+  const step1     = document.getElementById('step1');
+  const step2     = document.getElementById('step2');
+  const step3     = document.getElementById('step3');
+
+  function showStep(s) {
+    [step1, step2, step3].forEach(el => el.classList.remove('active'));
+    s.classList.add('active');
+  }
+
+  function openModal(id) {
+    document.getElementById('seatBadge').textContent = id;
+    document.getElementById('seatLabel').textContent = id;
+    document.getElementById('seatLabel2').textContent = id;
+    document.getElementById('inputName').value = '';
+    document.getElementById('inputPhone').value = '';
+    document.getElementById('inputName').classList.remove('error');
+    document.getElementById('inputPhone').classList.remove('error');
+    showStep(step1);
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+    // Revert seat to free if not confirmed
+    if (selectedSeat && !bookedSeats.has(selectedSeat)) {
+      const el = getSeatEl(selectedSeat);
+      if (el) el.className = 'seat free';
+      selectedSeat = null;
+    }
+  }
+
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('btnCancel').addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+  document.getElementById('btnProceed').addEventListener('click', () => showStep(step2));
+  document.getElementById('btnBackStep1').addEventListener('click', () => showStep(step1));
+
+  /* ── Payment ───────────────────────────────────────────── */
+  document.getElementById('btnPay').addEventListener('click', () => {
+    const name  = document.getElementById('inputName').value.trim();
+    const phone = document.getElementById('inputPhone').value.trim();
+    let valid = true;
+
+    const nameEl  = document.getElementById('inputName');
+    const phoneEl = document.getElementById('inputPhone');
+    nameEl.classList.remove('error');
+    phoneEl.classList.remove('error');
+
+    if (!name) { nameEl.classList.add('error'); valid = false; }
+    if (!/^\d{10}$/.test(phone)) { phoneEl.classList.add('error'); valid = false; }
+
+    if (!valid) {
+      showToast('Please fill in all fields correctly.');
+      return;
+    }
+
+    // Simulate payment → confirm booking
+    confirmBooking(name, phone);
+  });
+
+  function confirmBooking(name, phone) {
+    // Mark as booked
+    bookedSeats.add(selectedSeat);
+    const el = getSeatEl(selectedSeat);
+    if (el) {
+      el.className = 'seat busy';
+      el.setAttribute('aria-label', selectedSeat + ' – booked');
+    }
+    updateCount();
+
+    const maskedPhone = phone.slice(0, 3) + '****' + phone.slice(-3);
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
+    const timeStr = now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+
+    document.getElementById('bookingDetails').innerHTML = `
+      <b>Name:</b> ${escHtml(name)}<br>
+      <b>Phone:</b> ${escHtml(maskedPhone)}<br>
+      <b>Seat:</b> ${escHtml(selectedSeat)}<br>
+      <b>Library:</b> Lakshay Library, Padrauna<br>
+      <b>Date:</b> ${dateStr}<br>
+      <b>Time:</b> ${timeStr}<br>
+      <b>Amount Paid:</b> ₹50
+    `;
+
+    selectedSeat = null;
+    showStep(step3);
+  }
+
+  document.getElementById('btnDone').addEventListener('click', () => {
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+    selectedSeat = null;
+  });
+
+  /* ── Toast ─────────────────────────────────────────────── */
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  /* ── Helpers ───────────────────────────────────────────── */
+  function escHtml(s) {
+    return s.replace(/[&<>"']/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  /* ── Init ──────────────────────────────────────────────── */
+  buildGrid();
+})();
+</script>
+</body>
+</html>
